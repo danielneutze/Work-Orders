@@ -27,14 +27,24 @@ jobs:
           if [ -z "$SA" ]; then echo "Missing FIREBASE_SERVICE_ACCOUNT secret. See NOTES.md, Deploying."; exit 1; fi
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
 
-      - name: Deploy app, database rules and storage rules
+      - name: Deploy app and database rules
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: |
           set -o pipefail
-          npx --yes firebase-tools@13 deploy --only hosting,firestore,storage --project minits-app-c26e1 --non-interactive 2>&1 | tee "$RUNNER_TEMP/deploy.log" || {
+          npx --yes firebase-tools@13 deploy --only hosting,firestore --project minits-app-c26e1 --non-interactive 2>&1 | tee "$RUNNER_TEMP/deploy.log" || {
             # Surface the error lines as annotations so they show on the run's summary page.
-            grep -iE "error|denied|permission|forbidden|required|enable|failed" "$RUNNER_TEMP/deploy.log" | tail -15 | while IFS= read -r line; do echo "::error::${line//%/%25}"; done
+            grep -iE "error|denied|permission|forbidden|required|failed" "$RUNNER_TEMP/deploy.log" | tail -15 | while IFS= read -r line; do echo "::error::${line//%/%25}"; done
+            exit 1
+          }
+
+      - name: Deploy photo storage rules
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: |
+          set -o pipefail
+          npx --yes firebase-tools@13 deploy --only storage --project minits-app-c26e1 --non-interactive 2>&1 | tee "$RUNNER_TEMP/storage.log" || {
+            grep -iE "error|denied|permission|forbidden|required|failed" "$RUNNER_TEMP/storage.log" | tail -15 | while IFS= read -r line; do echo "::error::${line//%/%25}"; done
             exit 1
           }
 
