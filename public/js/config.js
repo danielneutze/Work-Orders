@@ -11,7 +11,7 @@ export const firebaseConfig = {
 
 // The email that becomes the Owner account on first sign-in.
 // It must match OWNER_EMAIL in firestore.rules.
-export const OWNER_EMAIL = "danielneutze@hotmail.com";
+export const OWNER_EMAIL = "daniel@minitstx.com";
 
 export const BUSINESS_NAME = "Work Orders";
 

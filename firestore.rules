@@ -7,7 +7,7 @@ service cloud.firestore {
 
     // ---- Settings ----
     // Must match OWNER_EMAIL in public/js/config.js.
-    function ownerEmail() { return 'danielneutze@hotmail.com'; }
+    function ownerEmail() { return 'daniel@minitstx.com'; }
 
     // ---- Who is signed in ----
     function signedIn() { return request.auth != null; }
