@@ -1,0 +1,121 @@
+rules_version = '2';
+
+// Who can do what. Roles: owner, manager, tech, requester.
+// Managers and techs only see jobs for the teams they belong to.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Settings ----
+    // Must match OWNER_EMAIL in public/js/config.js.
+    function ownerEmail() { return 'danielneutze@hotmail.com'; }
+
+    // ---- Who is signed in ----
+    function signedIn() { return request.auth != null; }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function hasProfile() { return signedIn() && exists(userPath(request.auth.uid)); }
+    function me() { return get(userPath(request.auth.uid)).data; }
+    function active() { return hasProfile() && me().get('active', true) == true; }
+    function isOwner() { return active() && me().role == 'owner'; }
+    function isMgr() { return active() && me().role in ['owner', 'manager']; }
+    function isStaff() { return active() && me().role in ['owner', 'manager', 'tech']; }
+    function inTeam(team) { return isOwner() || (isStaff() && team in me().teams); }
+    function mgrOf(team) { return isOwner() || (active() && me().role == 'manager' && team in me().teams); }
+    function tokenEmail() { return request.auth.token.get('email', ''); }
+    function tokenPhone() { return request.auth.token.get('phone_number', ''); }
+    function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+    // ---- People ----
+    function invitePath(key) { return /databases/$(database)/documents/invites/$(key); }
+    function fromInvite(key) {
+      return key != ''
+        && exists(invitePath(key))
+        && get(invitePath(key)).data.role == request.resource.data.role
+        && get(invitePath(key)).data.teams == request.resource.data.teams;
+    }
+    function bootOwner() {
+      return tokenEmail() == ownerEmail()
+        && request.auth.token.email_verified == true
+        && request.resource.data.role == 'owner';
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'role', 'teams', 'phone', 'email', 'active', 'createdAt'])
+        && request.resource.data.active == true
+        && (bootOwner()
+            || fromInvite(tokenPhone())
+            || (request.auth.token.get('email_verified', false) == true && fromInvite(tokenEmail())));
+      allow update: if isOwner()
+        || (signedIn() && request.auth.uid == uid && changedOnly(['name']));
+      allow delete: if isOwner();
+    }
+
+    // Invites are keyed by phone (+15551234567) or lowercase email.
+    match /invites/{key} {
+      allow get: if isOwner() || (signedIn() && (key == tokenPhone() || key == tokenEmail()));
+      allow list, write: if isOwner();
+    }
+
+    // ---- Shared lists ----
+    match /teams/{id} {
+      allow read: if active();
+      allow write: if isOwner();
+    }
+    match /properties/{id} {
+      allow read: if active();
+      allow write: if isMgr();
+    }
+    match /checklists/{id} {
+      allow read: if isStaff();
+      allow write: if isMgr();
+    }
+
+    // ---- Work orders ----
+    function jobTeam(jobId) { return get(/databases/$(database)/documents/jobs/$(jobId)).data.teamId; }
+
+    match /jobs/{jobId} {
+      allow read: if inTeam(resource.data.teamId);
+      allow create: if inTeam(request.resource.data.teamId) && request.resource.data.createdBy == request.auth.uid;
+      allow update: if (mgrOf(resource.data.teamId) && mgrOf(request.resource.data.teamId))
+        || (inTeam(resource.data.teamId)
+            && changedOnly(['status', 'checklist', 'partsTotal', 'minutesTotal', 'filesCount', 'updatedAt', 'completedAt']));
+      allow delete: if mgrOf(resource.data.teamId);
+
+      match /parts/{id} {
+        allow read: if inTeam(jobTeam(jobId));
+        allow create: if inTeam(jobTeam(jobId)) && request.resource.data.by == request.auth.uid;
+        allow delete: if mgrOf(jobTeam(jobId)) || (inTeam(jobTeam(jobId)) && resource.data.by == request.auth.uid);
+      }
+      match /files/{id} {
+        allow read: if inTeam(jobTeam(jobId));
+        allow create: if inTeam(jobTeam(jobId)) && request.resource.data.by == request.auth.uid;
+        allow delete: if mgrOf(jobTeam(jobId)) || (inTeam(jobTeam(jobId)) && resource.data.by == request.auth.uid);
+      }
+    }
+
+    // ---- Time ----
+    // One entry per stretch of work, always tied to a job.
+    match /time/{id} {
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || mgrOf(resource.data.teamId) || inTeam(resource.data.teamId));
+      allow create: if inTeam(request.resource.data.teamId)
+        && (request.resource.data.uid == request.auth.uid || mgrOf(request.resource.data.teamId));
+      allow update, delete: if mgrOf(resource.data.teamId)
+        || (isStaff() && resource.data.uid == request.auth.uid);
+    }
+
+    // The running clock for each person (at most one open job at a time).
+    match /clock/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isMgr());
+      allow write: if isStaff() && request.auth.uid == uid;
+    }
+
+    // ---- Requests from people outside the crew ----
+    match /requests/{id} {
+      allow read: if signedIn() && (resource.data.by == request.auth.uid || isMgr());
+      allow create: if active() && request.resource.data.by == request.auth.uid && request.resource.data.status == 'new';
+      allow update: if isMgr();
+      allow delete: if isOwner();
+    }
+  }
+}

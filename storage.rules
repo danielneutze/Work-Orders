@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// Photos and invoices. Files go under jobs/<jobId>/ or requests/<uid>/.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function profile() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+    function staff() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && profile().role in ['owner', 'manager', 'tech']
+        && profile().get('active', true) == true;
+    }
+    function okFile() {
+      return request.resource.size < 20 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType == 'application/pdf');
+    }
+
+    match /jobs/{jobId}/{file} {
+      allow read: if staff();
+      allow create: if staff() && okFile();
+      allow delete: if staff();
+    }
+
+    match /requests/{uid}/{file} {
+      allow read: if request.auth != null && (request.auth.uid == uid || staff());
+      allow create: if request.auth != null && request.auth.uid == uid
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && okFile();
+    }
+  }
+}
