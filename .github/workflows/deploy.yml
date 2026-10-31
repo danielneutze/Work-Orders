@@ -30,7 +30,13 @@ jobs:
       - name: Deploy app, database rules and storage rules
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
-        run: npx --yes firebase-tools@13 deploy --only hosting,firestore,storage --project minits-app-c26e1 --non-interactive
+        run: |
+          set -o pipefail
+          npx --yes firebase-tools@13 deploy --only hosting,firestore,storage --project minits-app-c26e1 --non-interactive 2>&1 | tee "$RUNNER_TEMP/deploy.log" || {
+            # Surface the error lines as annotations so they show on the run's summary page.
+            grep -iE "error|denied|permission|forbidden|required|enable|failed" "$RUNNER_TEMP/deploy.log" | tail -15 | while IFS= read -r line; do echo "::error::${line//%/%25}"; done
+            exit 1
+          }
 
       - name: Remove deploy key
         if: always()
