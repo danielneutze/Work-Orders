@@ -26,6 +26,8 @@ jobs:
         run: |
           if [ -z "$SA" ]; then echo "Missing FIREBASE_SERVICE_ACCOUNT secret. See NOTES.md, Deploying."; exit 1; fi
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          # Show which account is deploying (not secret) so permission problems are easy to trace.
+          node -e 'const k=require(process.argv[1]); console.log("::notice::Deploying as " + k.client_email + " (project " + k.project_id + ")")' "$RUNNER_TEMP/sa.json"
 
       - name: Deploy app and database rules
         env:
