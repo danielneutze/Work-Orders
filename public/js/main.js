@@ -127,7 +127,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet
 
 // ---------- Start ----------
 function mountShell() {
-  root.innerHTML = `<header class="top"><div class="top-in"><span class="brand"><img src="/logo-mark.svg" alt="">Work Orders</span><span class="grow"></span><span class="who">${esc(S.profile.name)}</span></div></header>
+  root.innerHTML = `<header class="top"><div class="top-in"><span class="brand"><img src="/logo-mark.svg" alt="" width="26" height="26">Work Orders</span><span class="grow"></span><span class="who">${esc(S.profile.name)}</span></div></header>
     <main id="main" aria-live="polite"></main><nav class="tabs" id="nav" aria-label="Sections"></nav>`;
   shell = { main: document.getElementById("main"), nav: document.getElementById("nav") };
 }

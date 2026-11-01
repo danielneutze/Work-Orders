@@ -44,8 +44,8 @@ h3 { font: 600 15px/1.2 var(--f-display); letter-spacing: .1em; text-transform: 
 /* Header + main + tabs */
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
 .top-in { max-width: 720px; margin: 0 auto; padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 12px; }
-.brand { display: flex; align-items: center; gap: 8px; font: 700 21px/1 var(--f-display); letter-spacing: .04em; text-transform: uppercase; }
-.brand img { width: 30px; height: 30px; }
+.brand { display: flex; align-items: center; gap: 8px; white-space: nowrap; font: 700 20px/1 var(--f-display); letter-spacing: .04em; text-transform: uppercase; }
+.brand img { width: 26px; height: 26px; flex: none; }
 .who { font-size: 13px; color: var(--muted); }
 main { max-width: 720px; margin: 0 auto; padding-block: 16px calc(96px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 14px; }
 nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line); padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
@@ -195,9 +195,9 @@ details summary { cursor: pointer; font-weight: 600; color: var(--accent); }
 
 /* Sign-in */
 .signin { min-height: 100vh; min-height: 100dvh; background: var(--dark); color: #fff; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; padding-block: calc(56px + env(safe-area-inset-top, 0px)) calc(32px + env(safe-area-inset-bottom, 0px)); padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); max-width: 520px; margin: 0 auto; }
-.signin-top { display: flex; flex-direction: column; gap: 16px; }
-.signin-logo { width: 200px; max-width: 70%; height: auto; display: block; }
-.signin-title { font: 700 36px/0.95 var(--f-display); letter-spacing: .02em; text-transform: uppercase; margin: 0; }
+.signin-top { display: flex; flex-direction: column; gap: 10px; }
+.signin-logo { width: 150px; height: auto; display: block; }
+.signin-title { font: 600 15px/1.2 var(--f-body); letter-spacing: .14em; text-transform: uppercase; color: var(--live); margin: 4px 0 0; }
 .signin-sub { margin: 0; font-size: 16px; color: var(--dark-muted); max-width: 320px; }
 .signin-form form, .signin-form { display: flex; flex-direction: column; gap: 12px; }
 .signin .lbl { color: var(--dark-muted); text-transform: uppercase; letter-spacing: .06em; }
