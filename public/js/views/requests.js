@@ -1,5 +1,5 @@
 // Submitting requests, "my requests", and the managers' request inbox.
-import { S, myTeams, teamName, propName, isMgr } from "../store.js";
+import { S, myTeams, teamName, propName, isMgr, isOwner } from "../store.js";
 import * as A from "../actions.js";
 import { esc, fmtStamp, toast, errorText, sheet } from "../ui.js";
 import { storage, ref, getDownloadURL } from "../fb.js";
@@ -23,6 +23,8 @@ export function requestFormView() {
   return `<div><p class="eyebrow">Signed in as ${esc(S.profile.name)}</p><h2>Report a problem</h2></div>
     ${props.length ? `<form class="panel" data-form="request">
       <label class="lbl">Property<select class="in" id="rProp" name="propertyId" required>${props.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></label>
+      <label class="lbl">Which team?<select class="in" id="rTeam" name="teamId">
+        <option value="">Not sure</option>${[...S.teams.values()].sort((a, b) => a.name.localeCompare(b.name)).map((t) => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join("")}</select></label>
       <label class="lbl">What's wrong?<textarea class="in" id="rText" name="text" required placeholder="Describe the problem and where it is"></textarea></label>
       <fieldset class="lbl"><legend>How soon does it need fixing?</legend><div class="seg3">
         ${Object.entries({ later: "Can wait", week: "This week", urgent: "Urgent" }).map(([k, l]) => `<label class="opt ${k === "urgent" ? "opt-urgent" : ""}"><input type="radio" name="urgency" value="${k}" ${draft.urgency === k ? "checked" : ""}><span>${l}</span></label>`).join("")}
@@ -39,12 +41,19 @@ function myRequestsBlock() {
   if (!mine.length) return "";
   return `<section class="panel"><h3>My requests</h3><div class="rows">${mine.map((r) => {
     const st = r.status === "accepted" ? `<span class="pill s-progress">Scheduled</span>` : r.status === "declined" ? `<span class="pill s-done">Declined</span>` : `<span class="pill s-open">Sent</span>`;
-    return `<div class="r"><span>${esc(r.text.split("\n")[0])}<small>${esc(propName(r.propertyId))} · ${fmtStamp(r.createdAt)}${r.reason ? ` · ${esc(r.reason)}` : ""}</small></span>${st}</div>`;
+    return `<div class="r"><span>${esc(r.text.split("\n")[0])}<small>${esc(propName(r.propertyId))}${r.teamId ? ` · ${esc(teamName(r.teamId))}` : ""} · ${fmtStamp(r.createdAt)}${r.reason ? ` · ${esc(r.reason)}` : ""}</small></span>${st}</div>`;
   }).join("")}</div></section>`;
 }
 
+// Managers see requests for their own teams plus ones with no team picked; the owner sees all.
+function visibleRequests() {
+  const mine = new Set(myTeams());
+  return [...S.inbox.values()].filter((r) => isOwner() || !r.teamId || mine.has(r.teamId));
+}
+export const inboxCount = () => visibleRequests().length;
+
 export function inboxView() {
-  const reqs = [...S.inbox.values()].sort((a, b) => {
+  const reqs = visibleRequests().sort((a, b) => {
     const u = (b.urgency === "urgent") - (a.urgency === "urgent"); if (u) return u;
     return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
   });
@@ -55,9 +64,9 @@ export function inboxView() {
       <div class="row between small muted"><span>${esc(r.byName)} · ${fmtStamp(r.createdAt)}</span>
         <span class="pill ${r.urgency === "urgent" ? "urgent" : r.urgency === "week" ? "s-parts" : "s-done"}">${URG[r.urgency] || ""}</span></div>
       <p class="notes strong">${esc(r.text)}</p>
-      <p class="muted small">${esc(propName(r.propertyId))}${r.guests ? " · Guests staying now" : ""}</p>
+      <p class="muted small">${esc(propName(r.propertyId))} · ${r.teamId ? esc(teamName(r.teamId)) : "No team picked"}${r.guests ? " · Guests staying now" : ""}</p>
       ${(r.photos || []).length ? `<div class="files">${r.photos.map((p) => { const u = photoUrl(p); return `<div class="file">${u ? `<button class="thumb" data-act="zoom" data-src="${esc(u)}" aria-label="View photo"><img src="${esc(u)}" alt=""></button>` : `<div class="thumb"><span class="small muted">Loading…</span></div>`}</div>`; }).join("")}</div>` : ""}
-      <div class="row"><button class="btn primary grow" data-act="accept" data-id="${esc(r.id)}">Make work order</button><button class="btn" data-act="decline" data-id="${esc(r.id)}">Decline</button></div>
+      <div class="row"><button class="btn primary grow" data-act="accept" data-id="${esc(r.id)}">Make work order${r.teamId ? ` · ${esc(teamName(r.teamId))}` : ""}</button><button class="btn" data-act="decline" data-id="${esc(r.id)}">Decline</button></div>
     </article>`).join("")}</div>`;
 }
 
@@ -67,7 +76,7 @@ export async function onRequestsClick(t) {
     const r = S.inbox.get(id); if (!r) return true;
     const first = r.text.split("\n")[0].trim();
     const f = sheet({ title: "Make work order", submitLabel: "Create job",
-      body: jobForm({}, { title: first.length > 70 ? first.slice(0, 67) + "…" : first, propertyId: r.propertyId, priority: r.urgency === "urgent" ? "urgent" : "normal", notes: "" }),
+      body: jobForm({}, { teamId: myTeams().includes(r.teamId) ? r.teamId : "", title: first.length > 70 ? first.slice(0, 67) + "…" : first, propertyId: r.propertyId, priority: r.urgency === "urgent" ? "urgent" : "normal", notes: "" }),
       onSubmit: async (fd) => {
         const f = readJobForm(fd);
         const jobId = await A.acceptRequest(r, f);
@@ -99,7 +108,7 @@ export async function onRequestsSubmit(form) {
   btn.disabled = true; btn.textContent = "Sending…";
   try {
     await A.submitRequest({
-      propertyId: fd.get("propertyId"), text: String(fd.get("text") || "").trim(), urgency: fd.get("urgency") || "week",
+      propertyId: fd.get("propertyId"), teamId: fd.get("teamId") || "", text: String(fd.get("text") || "").trim(), urgency: fd.get("urgency") || "week",
       guests: fd.get("guests") === "on", files: [...form.querySelector("#rFiles").files],
     });
     form.reset(); draft = { urgency: "week" };

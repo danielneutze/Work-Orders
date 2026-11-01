@@ -182,7 +182,7 @@ export async function saveProperty(id, data) {
 export const deleteProperty = (id) => deleteDoc(doc(db, "properties", id));
 
 // ---------- Requests ----------
-export async function submitRequest({ propertyId, text, urgency, guests, files }) {
+export async function submitRequest({ propertyId, teamId, text, urgency, guests, files }) {
   const photos = [];
   for (const f of files || []) {
     const path = `requests/${me()}/${Date.now()}-${safeName(f.name)}`;
@@ -190,7 +190,7 @@ export async function submitRequest({ propertyId, text, urgency, guests, files }
     photos.push(path);
   }
   await addDoc(collection(db, "requests"), {
-    by: me(), byName: myName(), propertyId, text, urgency, guests: !!guests, photos,
+    by: me(), byName: myName(), propertyId, teamId: teamId || "", text, urgency, guests: !!guests, photos,
     status: "new", jobId: "", createdAt: serverTimestamp(),
   });
 }

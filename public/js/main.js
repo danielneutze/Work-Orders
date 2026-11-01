@@ -19,7 +19,7 @@ function routes() {
     { k: "jobs", label: "Jobs", icon: "wrench" },
     { k: "time", label: "Time", icon: "clock" },
   ];
-  if (isMgr()) r.push({ k: "inbox", label: "Requests", icon: "inbox", badge: S.inbox.size });
+  if (isMgr()) r.push({ k: "inbox", label: "Requests", icon: "inbox", badge: Req.inboxCount() });
   else r.push({ k: "report", label: "Report", icon: "alert" });
   r.push({ k: "more", label: "More", icon: "menu" });
   return r;
