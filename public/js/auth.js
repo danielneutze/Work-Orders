@@ -15,7 +15,7 @@ let verifier = null;
 export function renderSignIn(root, message = "") {
   root.innerHTML = `<div class="signin">
     <div class="signin-top">
-      <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg></div>
+      <img class="signin-logo" src="/logo.svg" alt="Minits">
       <h1 class="signin-title">${esc(BUSINESS_NAME)}</h1>
       <p class="signin-sub">${mode === "email" ? "Sign in with your email and password." : "Sign in with the phone number your manager added."}</p>
     </div>

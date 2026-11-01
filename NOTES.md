@@ -6,7 +6,7 @@ future change (by Claude or a developer) starts with full context.
 ## What it is
 
 A phone-first work order app for a property maintenance business with several crews
-(Maintenance, Construction, Ranch, Mechanic shop). Live at **https://minits-app-c26e1.web.app**.
+(Maintenance, Construction, Ranch, Mechanic shop). Live at **https://minits-app-c26e1.web.app**. Branding: Minits logo (`public/logo.svg`, `public/logo-mark.svg`), navy + cyan palette in `styles.css`.
 
 - Hosting, sign-in, database and file storage: Firebase project `minits-app-c26e1` (Blaze plan).
 - Code: plain JavaScript modules, no build step. Firebase SDK loads from Google's CDN (pinned to 10.14.1).
